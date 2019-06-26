@@ -1,24 +1,26 @@
 const pg = require("pg");
-const settings = require("./settings"); // settings.json
-
-const client = new pg.Client({
-  user     : settings.user,
-  password : settings.password,
-  database : settings.database,
-  host     : settings.hostname,
-  port     : settings.port,
-  ssl      : settings.ssl
+const settings = require("./settings");
+const knex = require('knex')({
+  client: 'pg',
+  connection: settings
 });
 
-client.connect((err) => {
-  if (err) {
-    return console.error("Connection Error", err);
-  }
-  client.query("SELECT $1::int AS number", ["1"], (err, result) => {
+const firstName = process.argv.slice(2)[0];
+
+console.log('Searching ...');
+
+knex.select('*')
+  .from('famous_people')
+  .where('first_name', firstName)
+  .asCallback((err, rows) => {
     if (err) {
-      return console.error("error running query", err);
+      console.log('Error:', err);
+      return;
     }
-    console.log(result.rows[0].number); //output: 1
-    client.end();
+    let person = 1;
+    rows.forEach(result => {
+      console.log(`${person}: ${result.first_name} ${result.last_name}, born '${result.birthdate.toLocaleDateString()}'`);
+      person++;
+    });
+    knex.destroy();
   });
-});
